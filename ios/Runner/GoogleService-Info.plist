@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>425607283711-sapadnfhfrnem1dr3cbrf5tp9l64ifhd.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.425607283711-sapadnfhfrnem1dr3cbrf5tp9l64ifhd</string>
+	<key>API_KEY</key>
+	<string>AIzaSyBxmgBqAuThRoYiUZTFOElBP_AH07G_H3U</string>
+	<key>GCM_SENDER_ID</key>
+	<string>425607283711</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.example.cropConnect</string>
+	<key>PROJECT_ID</key>
+	<string>crop-connect-df2f5</string>
+	<key>STORAGE_BUCKET</key>
+	<string>crop-connect-df2f5.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:425607283711:ios:48b0a4a72716155ec05dca</string>
+	<key>DATABASE_URL</key>
+	<string>https://crop-connect-df2f5-default-rtdb.firebaseio.com</string>
+</dict>
+</plist>

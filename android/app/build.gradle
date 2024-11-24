@@ -1,0 +1,30 @@
+plugins {
+    id 'com.android.application'
+    id 'com.google.gms.google-services'  // Apply Google services plugin here
+}
+
+android {
+    defaultConfig {
+        applicationId "com.yourpackage.crop_connect"  // Replace with your package name
+        minSdkVersion 21
+        targetSdkVersion 33
+        compileSdkVersion 33
+
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        }
+    }
+}
+
+dependencies {
+    implementation platform('com.google.firebase:firebase-bom:33.6.0')
+    implementation 'com.google.firebase:firebase-analytics'
+
+    implementation "com.google.firebase:firebase-analytics-ktx"  // Example dependency
+    // Add other dependencies here as required
+}

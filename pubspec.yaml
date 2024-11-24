@@ -1,0 +1,26 @@
+name: crop_connect
+description: A new Flutter project for agricultural marketplace
+
+publish_to: 'none' # Remove this line if you're publishing to pub.dev
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"  # Dart SDK version constraint
+
+dependencies:
+  flutter:
+    sdk: flutter
+  firebase_core: ^3.7.0
+  firebase_auth: ^5.3.2
+  cloud_firestore: ^5.4.5
+  firebase_auth_web: ^5.8.13  # Updated to the latest compatible version
+  fluttertoast: ^8.0.9
+  http: ^1.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  assets:
+    - assets/images/placeholder.png
+  uses-material-design: true

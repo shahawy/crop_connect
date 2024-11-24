@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "425607283711",
+    "firebase_url": "https://crop-connect-df2f5-default-rtdb.firebaseio.com",
+    "project_id": "crop-connect-df2f5",
+    "storage_bucket": "crop-connect-df2f5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:425607283711:android:990c3c2396890ab7c05dca",
+        "android_client_info": {
+          "package_name": "com.example.crop_connect"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "425607283711-j8ocpm486odnek1lh1ivb1riop52tggo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA_ZEO35IuyD3ac4TJAvILjji2xewpB-hQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "425607283711-j8ocpm486odnek1lh1ivb1riop52tggo.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
