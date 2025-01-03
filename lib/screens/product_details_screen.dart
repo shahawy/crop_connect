@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final String productId;
@@ -33,15 +34,28 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     }
   }
 
+  // Updated method to include userId when adding to cart
   Future<void> _addToCart(String productId, String name, double price, int quantity) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    // Check if user is authenticated
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('You need to log in to add to cart.')));
+      return;
+    }
+
+    final userId = currentUser.uid;  // Get the userId from FirebaseAuth
     final cartCollection = FirebaseFirestore.instance.collection('cart');
+
     await cartCollection.add({
       'productId': productId,
       'name': name,
       'price': price,
       'quantity': quantity,
       'totalPrice': price * quantity,
+      'userId': userId,  // Add the userId to the cart document
     });
+
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Added to cart!')));
   }
 

@@ -1,23 +1,31 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'add_edit_product_screen.dart';  // Import the Add/Edit Product screen
+import 'package:flutter/material.dart';
+import 'add_edit_product_screen.dart';  // Import Add/Edit Product screen
 
 class FarmerDashboardScreen extends StatelessWidget {
+  final String userId;  // userId to be passed to the Add/Edit Product screen
+
+  // Constructor to accept userId
+  FarmerDashboardScreen({required this.userId});
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Fetch products from Firestore
+  // Fetch products from Firestore filtered by userId
   Stream<List<Map<String, dynamic>>> fetchProducts() {
     final productCollection = FirebaseFirestore.instance.collection('products');
-    return productCollection.snapshots().map((snapshot) {
+    return productCollection
+        .where('userId', isEqualTo: userId)  // Filter products by userId
+        .snapshots()
+        .map((snapshot) {
       return snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>; // Get the document data as a map
+        final data = doc.data() as Map<String, dynamic>;
         return {
-          'id': doc.id,  // Save the document ID to reference later
+          'id': doc.id,
           'name': data['name'],
           'description': data['description'],
           'price': data['price'],
-          'imageUrl': data.containsKey('imageUrl') ? data['imageUrl'] : null,  // Check if imageUrl exists
+          'imageUrl': data.containsKey('imageUrl') ? data['imageUrl'] : null,
         };
       }).toList();
     });
@@ -38,13 +46,13 @@ class FarmerDashboardScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('Farmer Dashboard'),
-        backgroundColor: Color(0xFF388E3C), // A fresh green color
+        backgroundColor: Color(0xFF388E3C),
         actions: [
           IconButton(
             icon: Icon(Icons.exit_to_app),
             onPressed: () async {
-              await _auth.signOut(); // Sign out the user
-              Navigator.pushReplacementNamed(context, '/'); // Navigate to the login screen
+              await _auth.signOut();  // Sign out the user
+              Navigator.pushReplacementNamed(context, '/');  // Navigate to login screen
             },
           ),
         ],
@@ -55,15 +63,18 @@ class FarmerDashboardScreen extends StatelessWidget {
           children: [
             ElevatedButton(
               onPressed: () {
+                // Navigate to Add/Edit Product screen
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => AddEditProductScreen(),  // Navigate to Add/Edit Product page
+                    builder: (context) => AddEditProductScreen(
+                      userId: userId,  // Pass userId to Add/Edit screen
+                    ),
                   ),
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF388E3C), // Fresh green color for button
+                backgroundColor: Color(0xFF388E3C),
                 padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),
               child: Text('Add Product'),
@@ -71,7 +82,7 @@ class FarmerDashboardScreen extends StatelessWidget {
             SizedBox(height: 16),
             Expanded(
               child: StreamBuilder<List<Map<String, dynamic>>>(
-                stream: fetchProducts(), // Use StreamBuilder to listen for real-time updates
+                stream: fetchProducts(),  // Use StreamBuilder for real-time updates
                 builder: (ctx, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return Center(child: CircularProgressIndicator());
@@ -113,7 +124,7 @@ class FarmerDashboardScreen extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF388E3C), // Green color for the text
+                              color: Color(0xFF388E3C),
                             ),
                           ),
                           subtitle: Text(
@@ -130,13 +141,12 @@ class FarmerDashboardScreen extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.orangeAccent, // Price in a nice orange
+                                  color: Colors.orangeAccent,
                                 ),
                               ),
                               IconButton(
                                 icon: Icon(Icons.delete, color: Colors.red),
                                 onPressed: () async {
-                                  // Show a confirmation dialog before deleting
                                   bool? confirmDelete = await showDialog(
                                     context: context,
                                     builder: (context) {
@@ -168,12 +178,13 @@ class FarmerDashboardScreen extends StatelessWidget {
                             ],
                           ),
                           onTap: () {
-                            // Navigate to the Edit Product screen and pass the product ID
+                            // Pass userId when navigating to Add/Edit Product screen for editing
                             Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => AddEditProductScreen(
                                   productId: products[index]['id'],
+                                  userId: userId,  // Pass userId
                                 ),
                               ),
                             );

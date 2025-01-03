@@ -21,8 +21,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   TextEditingController _cardNumberController = TextEditingController();
   TextEditingController _expiryDateController = TextEditingController();
   TextEditingController _cvcController = TextEditingController();
-  TextEditingController _statusController = TextEditingController();
-
 
   String? _selectedCountryCode = '+1-US';  // Default country code with unique identifier
   final List<Map<String, String>> _countryCodes = [
@@ -42,6 +40,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       try {
         // Create an order document in Firestore
         final orderRef = await FirebaseFirestore.instance.collection('orders').add({
+          'userId': widget.userId,  // Save the userId along with the order
           'user': {
             'name': _fullNameController.text,
             'phone': _phoneController.text,

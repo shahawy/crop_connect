@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'checkout_screen.dart'; // Import CheckoutScreen
 
 class CartScreen extends StatefulWidget {
-  final String userId; // Add userId to CartScreen
+  final String userId;
 
   CartScreen({Key? key, required this.userId}) : super(key: key);
 
@@ -14,49 +15,107 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   final CollectionReference cartCollection = FirebaseFirestore.instance.collection('cart');
 
-  // Method to calculate total price based on cart items
+  // Calculate total price of cart items
   double calculateTotalPrice(List<Map<String, dynamic>> cartItems) {
-    return cartItems.fold(0, (sum, item) => sum + (item['price'] * item['quantity']));
+    return cartItems.fold(0, (sum, item) => sum + (item['totalPrice'] ?? 0));
   }
 
-  // Method to update item quantity in Firestore
-  void updateItemQuantity(String itemId, int quantity) {
-    cartCollection.doc(itemId).update({'quantity': quantity});
+  // Add a product to the cart
+  // Add a product to the cart
+  void addToCart(String productId, String productName, double price, int quantity) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      print("Error: User is not logged in.");
+      return;
+    }
+
+    double totalPrice = price * quantity;
+    final userId = currentUser.uid;  // Get the userId from FirebaseAuth
+
+    print("Adding product to cart for userId: $userId");
+
+    // Make sure to store the userId as part of the cart item
+    cartCollection.add({
+      'productId': productId,
+      'name': productName,
+      'price': price,
+      'quantity': quantity,
+      'totalPrice': totalPrice,
+      'userId': userId,  // Store the userId directly from FirebaseAuth
+    }).then((value) {
+      print("Product added to cart for user: $userId");
+    }).catchError((error) {
+      print("Failed to add product to cart: $error");
+    });
   }
 
-  // Method to delete an item from the cart
-  void deleteItemFromCart(String itemId) {
-    cartCollection.doc(itemId).delete();
-  }
-
-  // Navigate to checkout screen
+  // Navigate to the checkout screen
   void proceedToCheckout(List<Map<String, dynamic>> cartItems) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CheckoutScreen(
           cartItems: cartItems,
-          userId: widget.userId, // Pass userId from CartScreen
+          userId: widget.userId,
         ),
       ),
     );
+  }
+
+  // Update item quantity
+  void updateQuantity(String itemId, int currentQuantity, int change) async {
+    try {
+      final newQuantity = currentQuantity + change;
+      if (newQuantity < 1) return; // Prevent negative quantity
+
+      // Get the document reference
+      DocumentSnapshot docSnapshot = await cartCollection.doc(itemId).get();
+
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data() as Map<String, dynamic>;
+        double price = data['price'] ?? 0;
+        double totalPrice = price * newQuantity;
+
+        // Update the quantity and total price
+        await cartCollection.doc(itemId).update({
+          'quantity': newQuantity,
+          'totalPrice': totalPrice,
+        });
+
+        print("Updated item quantity to $newQuantity and total price to $totalPrice.");
+      } else {
+        print("Item does not exist.");
+      }
+    } catch (e) {
+      print("Failed to update quantity: $e");
+    }
+  }
+
+  // Delete item from cart
+  void removeItemFromCart(String itemId) {
+    cartCollection.doc(itemId).delete().catchError((error) {
+      print("Failed to delete item: $error");
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Cart"),
+        title: Text(widget.userId.isNotEmpty ? 'Cart ' : 'Crop Connect'),
         backgroundColor: Color(0xFF388E3C),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: cartCollection.snapshots(),
+        stream: cartCollection.where('userId', isEqualTo: widget.userId).snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text("Error loading cart items"));
+            return Center(child: Text("Error loading cart items."));
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return Center(child: Text("Your cart is empty."));
           }
 
           final cartItems = snapshot.data!.docs.map((doc) {
@@ -66,6 +125,7 @@ class _CartScreenState extends State<CartScreen> {
               'name': data['name'],
               'price': data['price'],
               'quantity': data['quantity'],
+              'totalPrice': data['totalPrice'],
               'imageUrl': data.containsKey('imageUrl') ? data['imageUrl'] : 'assets/images/placeholder.png',
             };
           }).toList();
@@ -99,22 +159,20 @@ class _CartScreenState extends State<CartScreen> {
                             IconButton(
                               icon: Icon(Icons.remove),
                               onPressed: () {
-                                if (item['quantity'] > 1) {
-                                  updateItemQuantity(item['id'], item['quantity'] - 1);
-                                }
+                                updateQuantity(item['id'], item['quantity'], -1);
                               },
                             ),
                             Text('${item['quantity']}'),
                             IconButton(
                               icon: Icon(Icons.add),
                               onPressed: () {
-                                updateItemQuantity(item['id'], item['quantity'] + 1);
+                                updateQuantity(item['id'], item['quantity'], 1);
                               },
                             ),
                             IconButton(
                               icon: Icon(Icons.delete),
                               onPressed: () {
-                                deleteItemFromCart(item['id']);
+                                removeItemFromCart(item['id']);
                               },
                             ),
                           ],

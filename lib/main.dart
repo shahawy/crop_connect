@@ -12,6 +12,8 @@ import 'screens/order_confirmation_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase for both web and mobile platforms
   if (kIsWeb) {
     await Firebase.initializeApp(
       options: FirebaseOptions(
@@ -28,6 +30,7 @@ void main() async {
   } else {
     await Firebase.initializeApp();
   }
+
   runApp(CropConnectApp());
 }
 
@@ -42,16 +45,29 @@ class CropConnectApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => AuthScreen(),
-        '/farmer_dashboard': (context) => FarmerDashboardScreen(),
+        '/farmer_dashboard': (context) {
+          final userId = FirebaseAuth.instance.currentUser?.uid;
+          if (userId != null) {
+            return FarmerDashboardScreen(userId: userId);
+          } else {
+            return AuthScreen(); // If no user is logged in, navigate to AuthScreen
+          }
+        },
         '/admin_dashboard': (context) => AdminDashboardScreen(),
         '/home': (context) => HomeScreen(),
-        '/cart': (context) => CartScreen(userId: FirebaseAuth.instance.currentUser?.uid ?? ''),
-        '/checkout': (context) => CheckoutScreen(
-          cartItems: [], // You can pass actual cart items here
-          userId: FirebaseAuth.instance.currentUser?.uid ?? '',
-        ),
+        '/cart': (context) {
+          final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+          return CartScreen(userId: userId);
+        },
+        '/checkout': (context) {
+          final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+          return CheckoutScreen(
+            cartItems: [], // You can pass actual cart items here
+            userId: userId,
+          );
+        },
         '/order_confirmation': (context) {
-          String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+          final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
           List cartItems = []; // Pass actual cart items here
 
           return OrderConfirmationScreen(

@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthScreen extends StatefulWidget {
   @override
@@ -32,6 +33,12 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
+  // Save userId to SharedPreferences
+  Future<void> saveUserIdToPreferences(String userId) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setString('userId', userId);
+  }
+
   // Sign-up method
   Future<void> signUpWithEmailPassword() async {
     if (_passwordController.text != _confirmPasswordController.text) {
@@ -42,16 +49,23 @@ class _AuthScreenState extends State<AuthScreen> {
     try {
       UserCredential userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(
-        email: _emailController.text,
-        password: _passwordController.text,
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
       );
 
-      // Add name, email, and role to Firestore after sign-up
-      await FirebaseFirestore.instance.collection('users').doc(userCredential.user?.uid).set({
-        'name': _nameController.text, // Save the name here
-        'email': _emailController.text,
-        'role': _selectedRole,  // Role saved here (buyer, farmer)
+      // Add name, email, role, and userId to Firestore after sign-up
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user?.uid)
+          .set({
+        'userId': userCredential.user?.uid, // Store userId
+        'name': _nameController.text.trim(), // Save the name here
+        'email': _emailController.text.trim(),
+        'role': _selectedRole, // Role saved here (buyer, farmer)
       });
+
+      // Save userId to SharedPreferences
+      await saveUserIdToPreferences(userCredential.user?.uid ?? '');
 
       // Redirect to Sign-In screen after successful sign-up
       Navigator.pushReplacementNamed(context, '/');
@@ -64,8 +78,8 @@ class _AuthScreenState extends State<AuthScreen> {
   Future<void> signInWithEmailPassword() async {
     try {
       UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text,
-        password: _passwordController.text,
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
       );
 
       // Get user role from Firestore
@@ -76,6 +90,9 @@ class _AuthScreenState extends State<AuthScreen> {
 
       if (userDoc.exists) {
         String userRole = userDoc['role'];
+
+        // Save userId to SharedPreferences
+        await saveUserIdToPreferences(userCredential.user?.uid ?? '');
 
         // Navigate to the Home page or respective dashboard based on the role
         if (userRole == 'buyer') {

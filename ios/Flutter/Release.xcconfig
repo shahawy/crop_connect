@@ -1,1 +1,9 @@
-#include "Generated.xcconfig"
+// Import the CocoaPods-generated configuration for Release builds
+# Include the CocoaPods-generated configuration for Release
+#include "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"
+#import "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"
+
+// Import the generated Flutter settings
+#import "Generated.xcconfig"
+// Add this line to include the generated Pods config for Release
+#include "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"

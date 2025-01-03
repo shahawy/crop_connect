@@ -23,8 +23,8 @@ class _PastOrdersScreenState extends State<PastOrdersScreen> {
   Future<List<Map<String, dynamic>>> fetchPastOrders() async {
     final ordersCollection = FirebaseFirestore.instance
         .collection('orders')
-        // Filter orders by userId
-        .orderBy('orderDate', descending: true);
+        .where('userId', isEqualTo: widget.userId) // Filter by userId
+        .orderBy('orderDate', descending: true); // Order by date
 
     final snapshot = await ordersCollection.get();
 
