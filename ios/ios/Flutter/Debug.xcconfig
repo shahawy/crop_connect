@@ -1,0 +1,14 @@
+#include "Generated.xcconfig"
+// Import the CocoaPods-generated configuration for Debug builds
+// Adjust paths if necessary to ensure correct references
+# Include the CocoaPods-generated configuration for Debug
+#include "Pods/Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"open ios/Runner.xcworkspace
+// Ensure that the CocoaPods settings are included in the final configuration for Debug builds
+#import "Pods/Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"
+
+// Import the generated Flutter settings
+#import "Generated.xcconfig"
+// Add this line to include the generated Pods config for Debug
+#include "Pods/Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"
+# Include the CocoaPods-generated debug configuration
+include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"
