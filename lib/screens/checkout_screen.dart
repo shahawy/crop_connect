@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';  // Import Firestore
-import 'package:crop_connect/screens/order_confirmation_screen.dart';  // Correct the path
+import 'package:flutter/services.dart'; // For input formatting
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crop_connect/screens/order_confirmation_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final List cartItems;
-  final String userId;  // Add the userId here, passed as a parameter
+  final String userId;
 
   CheckoutScreen({Key? key, required this.cartItems, required this.userId}) : super(key: key);
 
@@ -22,13 +23,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   TextEditingController _expiryDateController = TextEditingController();
   TextEditingController _cvcController = TextEditingController();
 
-  String? _selectedCountryCode = '+1-US';  // Default country code with unique identifier
-  final List<Map<String, String>> _countryCodes = [
-    {'country': 'United States', 'code': '+1-US'},
-    {'country': 'Canada', 'code': '+1-CA'},
-    {'country': 'India', 'code': '+91'},
-    {'country': 'Egypt', 'code': '+20'},
-    // Add more countries as needed
+  String? _selectedCountryCode = '+1-US';
+  String _selectedPaymentMethod = 'Card';
+
+  final List<Map<String, dynamic>> _countryCodes = [
+    {'country': 'United States', 'code': '+1-US', 'phoneLength': 10},
+    {'country': 'Canada', 'code': '+1-CA', 'phoneLength': 10},
+    {'country': 'India', 'code': '+91', 'phoneLength': 10},
+    {'country': 'Egypt', 'code': '+20', 'phoneLength': 11},
+    // Add more countries and rules as needed
   ];
 
   double calculateTotalPrice(List cartItems) {
@@ -38,9 +41,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Future<void> _placeOrder() async {
     if (_formKey.currentState!.validate()) {
       try {
-        // Create an order document in Firestore
-        final orderRef = await FirebaseFirestore.instance.collection('orders').add({
-          'userId': widget.userId,  // Save the userId along with the order
+        await FirebaseFirestore.instance.collection('orders').add({
+          'userId': widget.userId,
           'user': {
             'name': _fullNameController.text,
             'phone': _phoneController.text,
@@ -50,16 +52,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           },
           'cartItems': widget.cartItems,
           'totalPrice': calculateTotalPrice(widget.cartItems),
+          'paymentMethod': _selectedPaymentMethod,
           'orderDate': Timestamp.now(),
-          'status': 'Pending'
+          'status': 'Pending',
         });
 
-        // Navigate to the OrderConfirmationScreen with the order ID and userId
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => OrderConfirmationScreen(
-              userId: widget.userId,  // Pass the userId here
+              userId: widget.userId,
               cartItems: widget.cartItems,
             ),
           ),
@@ -69,6 +71,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to place order")));
       }
     }
+  }
+
+  int getPhoneLength(String? countryCode) {
+    final country = _countryCodes.firstWhere((item) => item['code'] == countryCode, orElse: () => {});
+    return country['phoneLength'] ?? 10;
   }
 
   @override
@@ -91,6 +98,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 onChanged: (value) {
                   setState(() {
                     _selectedCountryCode = value!;
+                    _selectedPaymentMethod = 'Card'; // Reset payment method when changing country
                   });
                 },
                 validator: (value) => value == null ? 'Please select a country code' : null,
@@ -112,7 +120,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               TextFormField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
-                validator: (value) => value!.isEmpty ? 'Please enter your phone number' : null,
+                validator: (value) {
+                  final phoneLength = getPhoneLength(_selectedCountryCode);
+                  return value!.length == phoneLength
+                      ? null
+                      : 'Phone number must be $phoneLength digits for ${_selectedCountryCode!.split('-')[1]}';
+                },
                 decoration: InputDecoration(labelText: 'Phone Number'),
               ),
               SizedBox(height: 10),
@@ -130,57 +143,91 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               SizedBox(height: 20),
               Text("Payment Information", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               SizedBox(height: 10),
-              TextFormField(
-                controller: _cardNumberController,
-                keyboardType: TextInputType.number,
-                validator: (value) => value!.isEmpty ? 'Please enter your card number' : null,
-                decoration: InputDecoration(labelText: 'Card Number'),
+              if (_selectedCountryCode == '+20') ...[
+                RadioListTile<String>(
+                  value: 'COD',
+                  groupValue: _selectedPaymentMethod,
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedPaymentMethod = value!;
+                    });
+                  },
+                  title: Text("Cash on Delivery"),
+                ),
+              ],
+              RadioListTile<String>(
+                value: 'Card',
+                groupValue: _selectedPaymentMethod,
+                onChanged: (value) {
+                  setState(() {
+                    _selectedPaymentMethod = value!;
+                  });
+                },
+                title: Text("Credit Card"),
+                subtitle: _selectedCountryCode != '+20'
+                    ? Text("COD is only available in Egypt", style: TextStyle(color: Colors.red))
+                    : null,
               ),
-              SizedBox(height: 10),
-              TextFormField(
-                controller: _expiryDateController,
-                keyboardType: TextInputType.number,
-                validator: (value) => value!.isEmpty ? 'Please enter expiry date (MM/YY)' : null,
-                decoration: InputDecoration(labelText: 'Expiry Date (MM/YY)'),
-              ),
-              SizedBox(height: 10),
-              TextFormField(
-                controller: _cvcController,
-                keyboardType: TextInputType.number,
-                validator: (value) => value!.isEmpty ? 'Please enter CVC' : null,
-                decoration: InputDecoration(labelText: 'CVC'),
-              ),
+              if (_selectedPaymentMethod == 'Card') ...[
+                TextFormField(
+                  controller: _cardNumberController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [LengthLimitingTextInputFormatter(16), FilteringTextInputFormatter.digitsOnly],
+                  validator: (value) => value!.length == 16 ? null : 'Card number must be 16 digits',
+                  decoration: InputDecoration(labelText: 'Card Number'),
+                ),
+                SizedBox(height: 10),
+    TextFormField(
+    controller: _expiryDateController,
+    keyboardType: TextInputType.number,
+    maxLength: 5, // Limit input to 5 characters (MM/YY)
+    validator: (value) {
+    if (value == null || value.isEmpty) {
+    return 'Please enter expiry date';
+    }
+    if (!RegExp(r'^(0[1-9]|1[0-2])\/\d{2}$').hasMatch(value)) {
+    return 'Enter expiry date in MM/YY format';
+    }
+    return null;
+    },
+    decoration: InputDecoration(
+    labelText: 'Expiry Date (MM/YY)',
+    hintText: 'MM/YY',
+    counterText: '', // Hides the character counter
+    ),
+    ),
+
+                SizedBox(height: 10),
+                TextFormField(
+                  controller: _cvcController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [LengthLimitingTextInputFormatter(3), FilteringTextInputFormatter.digitsOnly],
+                  validator: (value) => value!.length == 3 ? null : 'CVC must be 3 digits',
+                  decoration: InputDecoration(labelText: 'CVC'),
+                ),
+              ],
               SizedBox(height: 20),
               Text("Order Summary", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              SizedBox(height: 10),
               ListView.builder(
                 shrinkWrap: true,
                 itemCount: widget.cartItems.length,
                 itemBuilder: (context, index) {
                   final item = widget.cartItems[index];
                   return ListTile(
-                    leading: Image.network(
-                      item['imageUrl'],
-                      width: 50,
-                      height: 50,
-                      fit: BoxFit.cover,
-                    ),
+                    leading: Image.network(item['imageUrl'], width: 50, height: 50, fit: BoxFit.cover),
                     title: Text(item['name']),
                     subtitle: Text("Quantity: ${item['quantity']} - \$${item['price']}"),
                   );
                 },
               ),
-              SizedBox(height: 10),
-              Text("Total: \$${calculateTotalPrice(widget.cartItems).toStringAsFixed(2)}",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
-              SizedBox(height: 20),
+              Text(
+                "Total: \$${calculateTotalPrice(widget.cartItems).toStringAsFixed(2)}",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green),
+              ),
               ElevatedButton(
-                onPressed: _placeOrder,  // Call the method to place the order
+                onPressed: _placeOrder,
                 child: Text("Complete Order"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF388E3C),
-                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-                ),
+                style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF388E3C)),
               ),
             ],
           ),
