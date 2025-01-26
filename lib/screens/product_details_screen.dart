@@ -20,6 +20,18 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     return docSnapshot.data();
   }
 
+  Future<String> fetchSellerName(String userId) async {
+    try {
+      final docSnapshot = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      if (docSnapshot.exists) {
+        return docSnapshot.data()?['name'] ?? 'Unknown Seller';
+      }
+    } catch (e) {
+      print('Error fetching seller name: $e');
+    }
+    return 'Unknown Seller';
+  }
+
   void _incrementQuantity() {
     setState(() {
       quantity++;
@@ -34,17 +46,15 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     }
   }
 
-  // Updated method to include userId when adding to cart
   Future<void> _addToCart(String productId, String name, double price, int quantity) async {
     final currentUser = FirebaseAuth.instance.currentUser;
 
-    // Check if user is authenticated
     if (currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('You need to log in to add to cart.')));
       return;
     }
 
-    final userId = currentUser.uid;  // Get the userId from FirebaseAuth
+    final userId = currentUser.uid;
     final cartCollection = FirebaseFirestore.instance.collection('cart');
 
     await cartCollection.add({
@@ -53,7 +63,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       'price': price,
       'quantity': quantity,
       'totalPrice': price * quantity,
-      'userId': userId,  // Add the userId to the cart document
+      'userId': userId,
     });
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Added to cart!')));
@@ -86,126 +96,145 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           final product = snapshot.data!;
           price = product['price'] ?? 0.0;
           productQuantity = product['quantity'] ?? 0;
+          final sellerId = product['userId'] ?? '';
 
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: product['imageUrl'] != null
-                      ? Image.network(
-                    product['imageUrl'],
-                    width: double.infinity,
-                    height: 250,  // Reduced image height
-                    fit: BoxFit.cover,
-                    alignment: Alignment.center,  // Fetch the left half of the image
-                  )
-                      : Image.asset(
-                    'assets/images/placeholder.png',
-                    width: double.infinity,
-                    height: 250,  // Reduced image height
-                    fit: BoxFit.cover,
-                    alignment: Alignment.center,  // Fetch the left half of the image
-                  ),
-                ),
-                SizedBox(height: 16),
-                Text(
-                  product['name'] ?? 'Product Name',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF388E3C),
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  '\$${price.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    fontSize: 20,
-                    color: Colors.orange,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 16),
-                Text(
-                  product['description'] ?? 'No description available.',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[700],
-                  ),
-                ),
-                SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+          return FutureBuilder<String>(
+            future: fetchSellerName(sellerId),
+            builder: (ctx, sellerSnapshot) {
+              if (sellerSnapshot.connectionState == ConnectionState.waiting) {
+                return Center(child: CircularProgressIndicator());
+              }
+
+              final sellerName = sellerSnapshot.data ?? 'Unknown Seller';
+
+              return Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    IconButton(
-                      icon: Icon(Icons.remove_circle_outline),
-                      color: Colors.red,
-                      onPressed: _decrementQuantity,
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: product['imageUrl'] != null
+                          ? Image.network(
+                        product['imageUrl'],
+                        width: double.infinity,
+                        height: 250,
+                        fit: BoxFit.cover,
+                      )
+                          : Image.asset(
+                        'assets/images/placeholder.png',
+                        width: double.infinity,
+                        height: 250,
+                        fit: BoxFit.cover,
+                      ),
                     ),
+                    SizedBox(height: 16),
                     Text(
-                      '$quantity',
+                      product['name'] ?? 'Product Name',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF388E3C),
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      '\$${price.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontSize: 20,
+                        color: Colors.orange,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    IconButton(
-                      icon: Icon(Icons.add_circle_outline),
-                      color: Colors.green,
-                      onPressed: _incrementQuantity,
-                    ),
-                  ],
-                ),
-                SizedBox(height: 16),
-                Text(
-                  'Total: \$${(price * quantity).toStringAsFixed(2)}',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green,
-                  ),
-                ),
-                if (productQuantity < 20)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      'Low Stock! Only $productQuantity left.',
+                    SizedBox(height: 8),
+                    Text(
+                      'Sold by: $sellerName',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.red,
+                        color: Colors.grey[700],
                       ),
                     ),
-                  ),
-                Spacer(),
-                ElevatedButton(
-                  onPressed: () {
-                    _addToCart(widget.productId, product['name'], price, quantity);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF388E3C),
-                    padding: EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.shopping_cart),
-                      SizedBox(width: 10),
-                      Text(
-                        'Add to Cart',
-                        style: TextStyle(fontSize: 18),
+                    SizedBox(height: 16),
+                    Text(
+                      product['description'] ?? 'No description available.',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[700],
                       ),
-                    ],
-                  ),
+                    ),
+                    SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.remove_circle_outline),
+                          color: Colors.red,
+                          onPressed: _decrementQuantity,
+                        ),
+                        Text(
+                          '$quantity',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.add_circle_outline),
+                          color: Colors.green,
+                          onPressed: _incrementQuantity,
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Total: \$${(price * quantity).toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                    if (productQuantity < 20)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          'Low Stock! Only $productQuantity left.',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ),
+                    Spacer(),
+                    ElevatedButton(
+                      onPressed: () {
+                        _addToCart(widget.productId, product['name'], price, quantity);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFF388E3C),
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.shopping_cart),
+                          SizedBox(width: 10),
+                          Text(
+                            'Add to Cart',
+                            style: TextStyle(fontSize: 18),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           );
         },
       ),
