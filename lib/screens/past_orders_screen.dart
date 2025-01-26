@@ -40,6 +40,7 @@ class _PastOrdersScreenState extends State<PastOrdersScreen> {
         'totalPrice': data['totalPrice'],
         'status': data['status'],
         'cartItems': data['cartItems'] ?? [],
+        'feedback': data['feedback'] ?? '', // Include feedback
       };
     }).toList();
   }
@@ -54,6 +55,22 @@ class _PastOrdersScreenState extends State<PastOrdersScreen> {
       });
     } catch (error) {
       print("Error deleting order: $error");
+    }
+  }
+
+  // Function to submit feedback
+  Future<void> submitFeedback(String orderId, String feedback) async {
+    try {
+      await FirebaseFirestore.instance.collection('orders').doc(orderId).update({
+        'feedback': feedback, // Save feedback in Firestore
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Feedback submitted successfully!')));
+      setState(() {
+        pastOrders = fetchPastOrders(); // Re-fetch orders to update feedback
+      });
+    } catch (error) {
+      print("Error submitting feedback: $error");
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error submitting feedback.')));
     }
   }
 
@@ -85,6 +102,12 @@ class _PastOrdersScreenState extends State<PastOrdersScreen> {
               final order = orders[index];
               final cartItems = order['cartItems'] as List;
               final orderStatus = order['status'];
+              final feedbackController = TextEditingController();
+
+              // Pre-fill the feedback if it exists
+              if (order['feedback'] != '') {
+                feedbackController.text = order['feedback'];
+              }
 
               return Card(
                 margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
@@ -104,6 +127,30 @@ class _PastOrdersScreenState extends State<PastOrdersScreen> {
                           child: Text('${item['name']} - \$${item['price']} (x${item['quantity']})'),
                         );
                       }).toList(),
+
+                      // Show feedback field if the status is "Delivered"
+                      if (orderStatus == 'Delivered') ...[
+                        SizedBox(height: 8),
+                        Text('Feedback:'),
+                        TextField(
+                          controller: feedbackController,
+                          decoration: InputDecoration(
+                            hintText: 'Write your feedback here...',
+                            border: OutlineInputBorder(),
+                          ),
+                          maxLines: 3,
+                        ),
+                        SizedBox(height: 8),
+                        ElevatedButton(
+                          onPressed: () {
+                            submitFeedback(order['id'], feedbackController.text);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFF388E3C),
+                          ),
+                          child: Text('Submit Feedback'),
+                        ),
+                      ],
                     ],
                   ),
                   trailing: orderStatus == 'Pending'

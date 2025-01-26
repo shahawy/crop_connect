@@ -226,6 +226,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         var totalPrice = orderData['totalPrice'] ?? 0;
                         var orderDate = orderData['orderDate']?.toDate() ?? DateTime.now();
                         var status = orderData['status'] ?? 'Pending';
+                        var feedback = orderData['feedback'] ?? '';
+                        var paymentmetod = orderData['paymentMethod'] ?? '';
+
 
                         return Card(
                           margin: EdgeInsets.symmetric(vertical: 8),
@@ -241,6 +244,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 Text('Address: ${user['address']}'),
                                 Text('Region: ${user['region']}'),
                                 Text('Total Price: \$${totalPrice}'),
+                                Text('Payment Metohd: ${paymentmetod}'),
+                                Text('Feedback: ${feedback}'),
                                 SizedBox(height: 8),
                                 Text('Products in Cart:', style: TextStyle(fontWeight: FontWeight.bold)),
                                 ...cartItems.map<Widget>((item) {

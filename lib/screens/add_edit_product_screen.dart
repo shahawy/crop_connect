@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class AddEditProductScreen extends StatefulWidget {
@@ -24,6 +25,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   final TextEditingController _quantityController = TextEditingController();
   String? _imageUrl;
   bool _isEditing = false;
+  String _userName = '';
+  bool _isUserNameLoaded = false;  // New flag to track if the user name has been loaded
 
   @override
   void initState() {
@@ -31,6 +34,35 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     if (widget.productId != null) {
       _isEditing = true;
       _loadProductData();
+    }
+    _fetchUserName();  // Fetch user's name when the screen is initialized
+  }
+
+  // Fetch the user's name based on userId
+  Future<void> _fetchUserName() async {
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.userId)
+          .get();
+
+      if (userDoc.exists) {
+        setState(() {
+          _userName = userDoc.data()?['name'] ?? 'Unknown User';
+          _isUserNameLoaded = true;  // Set the flag to true when the name is loaded
+        });
+      } else {
+        setState(() {
+          _userName = 'Unknown User';
+          _isUserNameLoaded = true;  // Set the flag to true even if the user document doesn't exist
+        });
+      }
+    } catch (e) {
+      print('Error fetching user data: $e');
+      setState(() {
+        _userName = 'Error fetching user data';
+        _isUserNameLoaded = true;  // Set the flag to true in case of an error
+      });
     }
   }
 
@@ -56,12 +88,13 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
 
   // Save or update product in Firestore
   Future<void> _saveProduct() async {
-    if (_formKey.currentState?.validate() ?? false) {
+    if (_formKey.currentState?.validate() ?? false && _isUserNameLoaded) {
       final productData = {
         'name': _nameController.text,
         'description': _descriptionController.text,
         'price': double.parse(_priceController.text),
         'userId': widget.userId,
+        'userName': _userName,  // Include the user's name
         'imageUrl': _imageUrlController.text,  // Store image URL from the new field
         'quantity': int.parse(_quantityController.text),  // Store quantity from the new field
         'dateAdded': FieldValue.serverTimestamp(),  // Add timestamp for when the product is added
@@ -84,6 +117,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       } catch (e) {
         print('Error saving product: $e');
       }
+    } else {
+      print('User name is not loaded yet or form validation failed');
     }
   }
 
@@ -129,7 +164,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
               ),
               SizedBox(height: 16),
               ElevatedButton(
-                onPressed: _saveProduct,
+                onPressed: _isUserNameLoaded ? _saveProduct : null,  // Disable button until the user name is loaded
                 child: Text(_isEditing ? 'Update Product' : 'Add Product'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFF388E3C),

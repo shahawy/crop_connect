@@ -40,6 +40,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   Future<void> _placeOrder() async {
     if (_formKey.currentState!.validate()) {
+      print('Form is valid');
       try {
         await FirebaseFirestore.instance.collection('orders').add({
           'userId': widget.userId,
@@ -70,6 +71,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         print('Error placing order: $e');
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to place order")));
       }
+    } else {
+      print('Form is invalid');
     }
   }
 
@@ -98,7 +101,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 onChanged: (value) {
                   setState(() {
                     _selectedCountryCode = value!;
-                    _selectedPaymentMethod = 'Card'; // Reset payment method when changing country
+                    // Automatically select COD for Egypt
+                    if (_selectedCountryCode == '+20') {
+                      _selectedPaymentMethod = 'COD';
+                    } else {
+                      _selectedPaymentMethod = 'Card'; // Default to Card for other countries
+                    }
                   });
                 },
                 validator: (value) => value == null ? 'Please select a country code' : null,
@@ -122,9 +130,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 keyboardType: TextInputType.phone,
                 validator: (value) {
                   final phoneLength = getPhoneLength(_selectedCountryCode);
-                  return value!.length == phoneLength
-                      ? null
-                      : 'Phone number must be $phoneLength digits for ${_selectedCountryCode!.split('-')[1]}';
+                  if (_selectedCountryCode == '+20') { // Special handling for Egypt
+                    if (value!.length != phoneLength) {
+                      return 'Phone number must be $phoneLength digits for Egypt';
+                    }
+                  } else {
+                    if (value!.length != phoneLength) {
+                      return 'Phone number must be $phoneLength digits for ${_selectedCountryCode!.split('-')[1]}';
+                    }
+                  }
+                  return null;
                 },
                 decoration: InputDecoration(labelText: 'Phone Number'),
               ),
@@ -177,26 +192,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   decoration: InputDecoration(labelText: 'Card Number'),
                 ),
                 SizedBox(height: 10),
-    TextFormField(
-    controller: _expiryDateController,
-    keyboardType: TextInputType.number,
-    maxLength: 5, // Limit input to 5 characters (MM/YY)
-    validator: (value) {
-    if (value == null || value.isEmpty) {
-    return 'Please enter expiry date';
-    }
-    if (!RegExp(r'^(0[1-9]|1[0-2])\/\d{2}$').hasMatch(value)) {
-    return 'Enter expiry date in MM/YY format';
-    }
-    return null;
-    },
-    decoration: InputDecoration(
-    labelText: 'Expiry Date (MM/YY)',
-    hintText: 'MM/YY',
-    counterText: '', // Hides the character counter
-    ),
-    ),
-
+                TextFormField(
+                  controller: _expiryDateController,
+                  keyboardType: TextInputType.number,
+                  maxLength: 5, // Limit input to 5 characters (MM/YY)
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter expiry date';
+                    }
+                    if (!RegExp(r'^(0[1-9]|1[0-2])\/\d{2}$').hasMatch(value)) {
+                      return 'Enter expiry date in MM/YY format';
+                    }
+                    return null;
+                  },
+                  decoration: InputDecoration(
+                    labelText: 'Expiry Date (MM/YY)',
+                    hintText: 'MM/YY',
+                    counterText: '', // Hides the character counter
+                  ),
+                ),
                 SizedBox(height: 10),
                 TextFormField(
                   controller: _cvcController,
