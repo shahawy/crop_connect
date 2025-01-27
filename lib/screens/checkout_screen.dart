@@ -42,6 +42,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     if (_formKey.currentState!.validate()) {
       print('Form is valid');
       try {
+        // Step 1: Place the order in the 'orders' collection
         await FirebaseFirestore.instance.collection('orders').add({
           'userId': widget.userId,
           'user': {
@@ -58,12 +59,28 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           'status': 'Pending',
         });
 
+        // Step 2: Clear the cart items from the 'cart' collection
+        var cartSnapshot = await FirebaseFirestore.instance
+            .collection('cart')  // This is the global cart collection
+            .where('userId', isEqualTo: widget.userId)  // Filter by userId
+            .get();
+
+        if (cartSnapshot.docs.isNotEmpty) {
+          for (var doc in cartSnapshot.docs) {
+            await doc.reference.delete();  // Delete each document in the cart
+          }
+          print("Cart items cleared!");
+        } else {
+          print("No cart items found to delete.");
+        }
+
+        // Step 3: Navigate to the Order Confirmation screen
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => OrderConfirmationScreen(
               userId: widget.userId,
-              cartItems: widget.cartItems,
+              cartItems: [],  // The cart should be empty after clearing
             ),
           ),
         );
@@ -75,6 +92,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       print('Form is invalid');
     }
   }
+
+
 
   int getPhoneLength(String? countryCode) {
     final country = _countryCodes.firstWhere((item) => item['code'] == countryCode, orElse: () => {});

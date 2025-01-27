@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
 final FirebaseAuth _auth = FirebaseAuth.instance;
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -87,9 +88,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('', style: TextStyle(fontSize: 0, fontWeight: FontWeight.bold, color: Color(0xFF388E3C))),
-              SizedBox(height: 0),
-
               // Analytics Section
               FutureBuilder<Map<String, int>>(
                 future: _getAnalytics(),
@@ -187,9 +185,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           itemCount: products.length,
                           itemBuilder: (context, index) {
                             var product = products[index];
+                            var dateAdded = product['dateAdded']?.toDate() ?? DateTime.now();
                             return ListTile(
                               title: Text(product['name']),
-                              subtitle: Text('Price: \$${product['price']}'),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Price: \$${product['price']}'),
+                                  Text('Created At: ${dateAdded.toLocal()}'),
+                                ],
+                              ),
                               trailing: TextButton(
                                 child: Text('Delete', style: TextStyle(color: Colors.red)),
                                 onPressed: () => FirebaseFirestore.instance.collection('products').doc(product.id).delete(),
@@ -227,8 +232,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         var orderDate = orderData['orderDate']?.toDate() ?? DateTime.now();
                         var status = orderData['status'] ?? 'Pending';
                         var feedback = orderData['feedback'] ?? '';
-                        var paymentmetod = orderData['paymentMethod'] ?? '';
-
+                        var paymentMethod = orderData['paymentMethod'] ?? '';
 
                         return Card(
                           margin: EdgeInsets.symmetric(vertical: 8),
@@ -237,15 +241,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Order ID: ${order.id}', style: TextStyle(fontWeight: FontWeight.bold)),
-                                Text('Order Date: ${orderDate.toLocal()}'),
-                                Text('Phone: ${user['phone']}'),
-                                Text('Name: ${user['name']}'),
-                                Text('Address: ${user['address']}'),
-                                Text('Region: ${user['region']}'),
-                                Text('Total Price: \$${totalPrice}'),
-                                Text('Payment Metohd: ${paymentmetod}'),
-                                Text('Feedback: ${feedback}'),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Order ID: ${order.id}', style: TextStyle(fontWeight: FontWeight.bold)),
+                                        Text('Order Date: ${orderDate.toLocal()}'),
+                                        Text('Phone: ${user['phone']}'),
+                                        Text('Name: ${user['name']}'),
+                                        Text('Address: ${user['address']}'),
+                                        Text('Region: ${user['region']}'),
+                                        Text('Total Price: \$${totalPrice}'),
+                                        Text('Payment Method: ${paymentMethod}'),
+                                        Text('Feedback: ${feedback}'),
+                                      ],
+                                    ),
+                                    // Delete Button
+                                    TextButton(
+                                      onPressed: () async {
+                                        try {
+                                          await FirebaseFirestore.instance.collection('orders').doc(order.id).delete();
+                                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Order deleted")));
+                                        } catch (e) {
+                                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to delete order")));
+                                        }
+                                      },
+                                      child: Text('Delete', style: TextStyle(color: Colors.red)),
+                                    ),
+                                  ],
+                                ),
                                 SizedBox(height: 8),
                                 Text('Products in Cart:', style: TextStyle(fontWeight: FontWeight.bold)),
                                 ...cartItems.map<Widget>((item) {
@@ -257,7 +283,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 SizedBox(height: 8),
                                 DropdownButton<String>(
                                   value: status,
-                                  items: ['Pending', 'Confirmed','Shipped', 'Delivered'].map((statusOption) {
+                                  items: ['Pending', 'Confirmed', 'Shipped', 'Delivered'].map((statusOption) {
                                     return DropdownMenuItem(value: statusOption, child: Text(statusOption));
                                   }).toList(),
                                   onChanged: (newStatus) async {
